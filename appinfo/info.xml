@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<info>
+	<id>user_typo3</id>
+	<name>SQL user backend for TYPO3</name>
+	<summary>Authenticate Users by SQL from a TYPO3 installation</summary>
+	<description>Authenticate Users by SQL from a TYPO3 installation</description>
+	<version>1.0</version>
+	<licence>agpl</licence>
+	<author>Philipp Seßner &lt;philipp.sessner (at) gmail (dot) com &gt;</author>
+	<namespace>user_typo3</namespace>
+	<bugs>https://github.com/lumrenion/user_typo3/issues</bugs>
+	<repository>https://github.com/lumrenion/user_typo3</repository>
+	<screenshot>https://raw.githubusercontent.com/lumrenion/user_typo3/v1.0/screenshot.png</screenshot>
+	<types>
+		<authentication/>
+	</types>
+	<category>auth</category>
+	<dependencies>
+		<nextcloud min-version="13" max-version="13"/>
+		<database>mysql</database>
+		<database>pgsql</database>
+	</dependencies>
+	<settings>
+		<admin>\OCA\user_typo3\Settings\Admin</admin>
+		<admin-section>OCA\user_typo3\Settings\Section</admin-section>
+	</settings>
+</info>
