@@ -36,6 +36,13 @@ use OCP\IUser;
 use OCP\IUserSession;
 use OCP\Notification\IManager as INotificationManager;
 use OCP\Util;
+use TYPO3\CMS\Saltedpasswords\Salt\AbstractSalt;
+use TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt;
+use TYPO3\CMS\Saltedpasswords\Salt\Md5Salt;
+use TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt;
+use TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt;
+use TYPO3\CMS\Saltedpasswords\Salt\SaltFactory;
+use TYPO3\CMS\Saltedpasswords\Salt\SaltInterface;
 
 abstract class BackendUtility {
     protected $access;
@@ -66,16 +73,15 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     public function __construct()
     {
         $memcache = \OC::$server->getMemCacheFactory();
-        if ( $memcache -> isAvailable())
-        {
-            $this -> cache = $memcache -> create();
+        if ($memcache->isAvailable()) {
+            $this->cache = $memcache->create();
         }
-        $this -> helper = new \OCA\user_typo3\lib\Helper();
+        $this->helper = new \OCA\user_typo3\lib\Helper();
         $domain = \OC::$server->getRequest()->getServerHost();
-        $this -> settings = $this -> helper -> loadSettingsForDomain($domain);
-        $this -> ocConfig = \OC::$server->getConfig();
-        $this -> helper -> connectToDb($this -> settings);
-        $this -> session_cache_name = 'USER_TYPO3_CACHE';
+        $this->settings = $this->helper->loadSettingsForDomain($domain);
+        $this->ocConfig = \OC::$server->getConfig();
+        $this->helper->connectToDb($this->settings);
+        $this->session_cache_name = 'USER_TYPO3_CACHE';
         return false;
     }
 
@@ -93,56 +99,57 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     private function doEmailSync($uid)
     {
         Util::writeLog('OC_USER_TYPO3', "Entering doEmailSync for UID: $uid",
-                             Util::DEBUG);
-        if($this -> settings['col_email'] === '')
+            Util::DEBUG);
+        if ($this->settings['col_email'] === '') {
             return false;
+        }
 
-        if($this -> settings['set_mail_sync_mode'] === 'none')
+        if ($this->settings['set_mail_sync_mode'] === 'none') {
             return false;
+        }
 
         $ocUid = $uid;
-        $uid = $this -> doUserDomainMapping($uid);
+        $uid = $this->doUserDomainMapping($uid);
 
-        $row = $this -> helper -> runQuery('getMail', array('uid' => $uid));
-        if($row === false)
-        {
+        $row = $this->helper->runQuery('getMail', array('uid' => $uid));
+        if ($row === false) {
             return false;
         }
         $newMail = $row['email'];
 
-        $currMail = $this->ocConfig->getUserValue(    $ocUid,
-                                                    'settings',
-                                                    'email', '');
+        $currMail = $this->ocConfig->getUserValue($ocUid,
+            'settings',
+            'email', '');
 
-        switch($this -> settings['set_mail_sync_mode'])
-        {
+        switch ($this->settings['set_mail_sync_mode']) {
             case 'initial':
-                if($currMail === '')
-                    $this->ocConfig->setUserValue(    $ocUid,
-                                                    'settings',
-                                                    'email',
-                                                    $newMail);
+                if ($currMail === '') {
+                    $this->ocConfig->setUserValue($ocUid,
+                        'settings',
+                        'email',
+                        $newMail);
+                }
                 break;
             case 'forcesql':
                 //if($currMail !== $newMail)
-                    $this->ocConfig->setUserValue(    $ocUid,
-                                                    'settings',
-                                                    'email',
-                                                    $newMail);
+                $this->ocConfig->setUserValue($ocUid,
+                    'settings',
+                    'email',
+                    $newMail);
                 break;
             case 'forceoc':
-                if(($currMail !== '') && ($currMail !== $newMail))
-                {
-                    $row = $this -> helper -> runQuery('setMail',
-                                                        array('uid' => $uid,
-                                                        'currMail' => $currMail)
-                                                        , true);
+                if (($currMail !== '') && ($currMail !== $newMail)) {
+                    $row = $this->helper->runQuery('setMail',
+                        array(
+                            'uid' => $uid,
+                            'currMail' => $currMail
+                        )
+                        , true);
 
-                    if($row === false)
-                    {
+                    if ($row === false) {
                         Util::writeLog('OC_USER_TYPO3',
-                        "Could not update E-Mail address in SQL database!",
-                        Util::ERROR);
+                            "Could not update E-Mail address in SQL database!",
+                            Util::ERROR);
                     }
                 }
                 break;
@@ -162,19 +169,17 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     {
         $uid = trim($uid);
 
-        if($this -> settings['set_default_domain'] !== '')
-        {
-            Util::writeLog('OC_USER_TYPO3', "Append default domain: ".
-               $this -> settings['set_default_domain'], Util::DEBUG);
-            if(strpos($uid, '@') === false)
-            {
-                $uid .= "@" . $this -> settings['set_default_domain'];
+        if ($this->settings['set_default_domain'] !== '') {
+            Util::writeLog('OC_USER_TYPO3', "Append default domain: " .
+                $this->settings['set_default_domain'], Util::DEBUG);
+            if (strpos($uid, '@') === false) {
+                $uid .= "@" . $this->settings['set_default_domain'];
             }
         }
 
         $uid = strtolower($uid);
         Util::writeLog('OC_USER_TYPO3', 'Returning mapped UID: ' . $uid,
-         Util::DEBUG);
+            Util::DEBUG);
         return $uid;
     }
 
@@ -186,12 +191,10 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     public function implementsActions($actions)
     {
         return (bool)((Backend::CHECK_PASSWORD
-            | Backend::GET_DISPLAYNAME
-            | Backend::COUNT_USERS
-            | ($this -> settings['set_allow_pwchange'] === 'true' ?
-                Backend::SET_PASSWORD : 0)
-            | ($this -> settings['set_enable_gethome'] === 'true' ?
-                Backend::GET_HOME : 0)
+                | Backend::GET_DISPLAYNAME
+                | Backend::COUNT_USERS
+                | ($this->settings['set_allow_pwchange'] === 'true' ?
+                    Backend::SET_PASSWORD : 0)
             ) & $actions);
     }
 
@@ -211,49 +214,7 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
      */
     public function getHome($uid)
     {
-        Util::writeLog('OC_USER_TYPO3', "Entering getHome for UID: $uid",
-                            Util::DEBUG);
-
-        if($this -> settings['set_enable_gethome'] !== 'true')
-            return false;
-
-        $uidMapped = $this -> doUserDomainMapping($uid);
-        $home = false;
-
-        switch($this->settings['set_gethome_mode'])
-        {
-            case 'query':
-                Util::writeLog('OC_USER_TYPO3',
-                            "getHome with Query selected, running Query...",
-                            Util::DEBUG);
-                $row = $this -> helper -> runQuery('getHome',
-                                                array('uid' => $uidMapped));
-                if($row === false)
-                {
-                    Util::writeLog('OC_USER_TYPO3',
-                                "Got no row, return false",
-                                Util::DEBUG);
-                    return false;
-                }
-                $home = $row[$this -> settings['col_gethome']];
-            break;
-
-            case 'static':
-                Util::writeLog('OC_USER_TYPO3',
-                                    "getHome with static selected",
-                                    Util::DEBUG);
-                $home = $this -> settings['set_gethome'];
-                $home = str_replace('%ud', $uidMapped, $home);
-                $home = str_replace('%u', $uid, $home);
-                $home = str_replace('%d',
-                                $this -> settings['set_default_domain'],
-                                $home);
-            break;
-        }
-        Util::writeLog('OC_USER_TYPO3',
-                        "Returning getHome for UID: $uid with Home $home",
-                        Util::DEBUG);
-        return $home;
+        return false;
     }
 
     /**
@@ -264,8 +225,8 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     {
         // Can't create user
         Util::writeLog('OC_USER_TYPO3',
-        'Not possible to create local users from web'.
-        ' frontend using SQL user backend', Util::ERROR);
+            'Not possible to create local users from web' .
+            ' frontend using SQL user backend', Util::ERROR);
         return false;
     }
 
@@ -277,7 +238,7 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     public function deleteUser($uid)
     {
         // Can't delete user
-        Util::writeLog('OC_USER_TYPO3', 'Not possible to delete local users'.
+        Util::writeLog('OC_USER_TYPO3', 'Not possible to delete local users' .
             ' from web frontend using SQL user backend', Util::ERROR);
         return false;
     }
@@ -286,7 +247,7 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
      * Set (change) a user password
      * This can be enabled/disabled in the settings (set_allow_pwchange)
      *
-     * @param string $uid      The user ID
+     * @param string $uid The user ID
      * @param string $password The user's new password
      * @return bool The return status
      */
@@ -295,76 +256,39 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
         // Update the user's password - this might affect other services, that
         // use the same database, as well
         Util::writeLog('OC_USER_TYPO3', "Entering setPassword for UID: $uid",
-         Util::DEBUG);
+            Util::DEBUG);
 
-        if($this -> settings['set_allow_pwchange'] !== 'true')
-            return false;
-
-        $uid = $this -> doUserDomainMapping($uid);
-
-        $row = $this -> helper -> runQuery('getPass', array('uid' => $uid));
-        if($row === false)
-        {
+        if ($this->settings['set_allow_pwchange'] !== 'true') {
             return false;
         }
-        $old_password = $row['password'];
-        if($this -> settings['set_crypt_type'] === 'joomla2')
-        {
-            if(!class_exists('\PasswordHash'))
-                require_once('PasswordHash.php');
-            $hasher = new \PasswordHash(10, true);
-            $enc_password = $hasher -> HashPassword($password);
-        }
-        elseif($this -> settings['set_crypt_type'] === 'sha1')
-        {
-            $enc_password = sha1($password);
-        }
-        elseif($this -> settings['set_crypt_type'] === 'system')
-        {
-            $prefix=substr($old_password,0,2);
-             if ($prefix==="$2")
-                {
-                    $enc_password = $this->pw_hash($password);
-                }
-            else
-            {
-             if (($prefix==="$1") or ($prefix[0] != "$")) //old md5 or DES
-                       {
-                           //Update encryption algorithm
-                           $prefix="$6"; //change to sha512
-                       }
 
-              $newsalt=$this->create_systemsalt();
-            $enc_password=crypt($password,$prefix ."$" . $newsalt);
-            }
+        $uid = $this->doUserDomainMapping($uid);
 
+        $row = $this->helper->runQuery('getPass', array('uid' => $uid));
+        if ($row === false) {
+            return false;
         }
-        elseif($this -> settings['set_crypt_type'] === 'password_hash')
-        {
-                    $enc_password = $this->pw_hash($password);
-        }
-         else
-        {
-            $enc_password = $this -> pacrypt($password, $old_password);
-        }
-        $res = $this -> helper -> runQuery('setPass',
-                    array('uid' => $uid, 'enc_password' => $enc_password),
-                    true);
-        if($res === false)
-        {
+
+        $saltingInstance = $this->getSaltingInstance();
+        $enc_password = $saltingInstance->getHashedPassword($password);
+
+        $res = $this->helper->runQuery('setPass',
+            array('uid' => $uid, 'enc_password' => $enc_password),
+            true);
+        if ($res === false) {
             Util::writeLog('OC_USER_TYPO3', "Could not update password!",
-                                Util::ERROR);
+                Util::ERROR);
             return false;
         }
         Util::writeLog('OC_USER_TYPO3',
-                    "Updated password successfully, return true",
-                    Util::DEBUG);
+            "Updated password successfully, return true",
+            Util::DEBUG);
         return true;
     }
 
     /**
      * Check if the password is correct
-     * @param string $uid      The username
+     * @param string $uid The username
      * @param string $password The password
      * @return bool true/false
      *
@@ -373,61 +297,41 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     public function checkPassword($uid, $password)
     {
         Util::writeLog('OC_USER_TYPO3',
-                    "Entering checkPassword() for UID: $uid",
-                    Util::DEBUG);
+            "Entering checkPassword() for UID: $uid",
+            Util::DEBUG);
 
-        $uid = $this -> doUserDomainMapping($uid);
+        $uid = $this->doUserDomainMapping($uid);
 
-            $row = $this -> helper -> runQuery('getPass', array('uid' => $uid));
-            if($row === false)
-            {
-                Util::writeLog('OC_USER_TYPO3', "Got no row, return false", Util::DEBUG);
-                return false;
-            }
-            $db_pass = $row['password'];
+        $row = $this->helper->runQuery('getPass', array('uid' => $uid));
+        if ($row === false) {
+            Util::writeLog('OC_USER_TYPO3', "Got no row, return false", Util::DEBUG);
+            return false;
+        }
+        $db_pass = $row['password'];
 
         Util::writeLog('OC_USER_TYPO3', "Encrypting and checking password",
-                            Util::DEBUG);
-        // Joomla 2.5.18 switched to phPass, which doesn't play nice with the
-        // way we check passwords
-        if($this -> settings['set_crypt_type'] === 'joomla2')
-        {
-            if(!class_exists('\PasswordHash'))
-                require_once('PasswordHash.php');
-            $hasher = new \PasswordHash(10, true);
-            $ret = $hasher -> CheckPassword($password, $db_pass);
-        }
-       elseif($this -> settings['set_crypt_type'] === 'password_hash')
-        {
-            $ret = password_verify($password,$db_pass);
-        }
-        
-        elseif($this -> settings['set_crypt_type'] == 'sha1')
-        {
-            $ret = $this->hash_equals(sha1($password) , $db_pass);
-        } else
+            Util::DEBUG);
 
-        {
-           // $ret = $this -> pacrypt($password, $db_pass) === $db_pass;
-            $ret = $this->hash_equals($this -> pacrypt($password, $db_pass),
-                                        $db_pass);
+        $saltingInstance = $this->getSaltingInstance($db_pass);
+        if ($saltingInstance === false) {
+            return false;
         }
-        if($ret)
-        {
+
+        $ret = $saltingInstance->checkPassword($password, $db_pass);
+
+        if ($ret) {
             Util::writeLog('OC_USER_TYPO3',
-                                "Passwords matching, return true",
-                                Util::DEBUG);
-            if($this -> settings['set_strip_domain'] === 'true')
-            {
+                "Passwords matching, return true",
+                Util::DEBUG);
+            if ($this->settings['set_strip_domain'] === 'true') {
                 $uid = explode("@", $uid);
                 $uid = $uid[0];
             }
             return $uid;
-        } else
-        {
+        } else {
             Util::writeLog('OC_USER_TYPO3',
-                            "Passwords do not match, return false",
-                            Util::DEBUG);
+                "Passwords do not match, return false",
+                Util::DEBUG);
             return false;
         }
     }
@@ -439,68 +343,64 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     public function countUsers()
     {
         Util::writeLog('OC_USER_TYPO3', "Entering countUsers()",
-                            Util::DEBUG);
+            Util::DEBUG);
 
-        $search = "%".$this -> doUserDomainMapping("");
-        $userCount = $this -> helper -> runQuery('countUsers',
-                                                array('search' => $search));
-        if($userCount === false)
-        {
+        $search = "%" . $this->doUserDomainMapping("");
+        $userCount = $this->helper->runQuery('countUsers',
+            array('search' => $search));
+        if ($userCount === false) {
             $userCount = 0;
-        }
-        else {
+        } else {
             $userCount = reset($userCount);
         }
 
-        Util::writeLog('OC_USER_TYPO3', "Return usercount: ".$userCount,
-                            Util::DEBUG);
+        Util::writeLog('OC_USER_TYPO3', "Return usercount: " . $userCount,
+            Util::DEBUG);
         return $userCount;
     }
 
     /**
      * Get a list of all users
      * @param string $search The search term (can be empty)
-     * @param int $limit     The search limit (can be null)
-     * @param int $offset    The search offset (can be null)
+     * @param int $limit The search limit (can be null)
+     * @param int $offset The search offset (can be null)
      * @return array with all uids
      */
     public function getUsers($search = '', $limit = null, $offset = null)
     {
         Util::writeLog('OC_USER_TYPO3',
-        "Entering getUsers() with Search: $search, ".
-        "Limit: $limit, Offset: $offset", Util::DEBUG);
+            "Entering getUsers() with Search: $search, " .
+            "Limit: $limit, Offset: $offset", Util::DEBUG);
         $users = array();
 
-        if($search !== '')
-        {
-            $search = "%".$this -> doUserDomainMapping($search."%")."%";
-        }
-        else
-        {
-           $search = "%".$this -> doUserDomainMapping("")."%";
+        if ($search !== '') {
+            $search = "%" . $this->doUserDomainMapping($search . "%") . "%";
+        } else {
+            $search = "%" . $this->doUserDomainMapping("") . "%";
         }
 
-        $rows = $this -> helper -> runQuery('getUsers',
-                                            array('search' => $search),
-                                            false,
-                                            true,
-                                            array('limit' => $limit,
-                                                'offset' => $offset));
-        if($rows === false)
+        $rows = $this->helper->runQuery('getUsers',
+            array('search' => $search),
+            false,
+            true,
+            array(
+                'limit' => $limit,
+                'offset' => $offset
+            ));
+        if ($rows === false) {
             return array();
+        }
 
-        foreach($rows as $row)
-        {
+        foreach ($rows as $row) {
             $uid = $row['username'];
-            if($this -> settings['set_strip_domain'] === 'true')
-            {
+            if ($this->settings['set_strip_domain'] === 'true') {
                 $uid = explode("@", $uid);
                 $uid = $uid[0];
             }
             $users[] = strtolower($uid);
         }
         Util::writeLog('OC_USER_TYPO3', "Return list of results",
-                            Util::DEBUG);
+            Util::DEBUG);
         return $users;
     }
 
@@ -513,36 +413,34 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     {
 
         $cacheKey = 'sql_user_exists_' . $uid;
-        $cacheVal = $this -> getCache ($cacheKey);
+        $cacheVal = $this->getCache($cacheKey);
         Util::writeLog('OC_USER_TYPO3',
-                        "userExists() for UID: $uid cacheVal: $cacheVal",
-                        Util::DEBUG);
-        if(!is_null($cacheVal))
+            "userExists() for UID: $uid cacheVal: $cacheVal",
+            Util::DEBUG);
+        if (!is_null($cacheVal)) {
             return (bool)$cacheVal;
+        }
 
         Util::writeLog('OC_USER_TYPO3',
-                        "Entering userExists() for UID: $uid",
-                        Util::DEBUG);
+            "Entering userExists() for UID: $uid",
+            Util::DEBUG);
 
         // Only if the domain is removed for internal user handling,
         // we should add the domain back when checking existance
-        if($this -> settings['set_strip_domain'] === 'true')
-        {
-            $uid = $this -> doUserDomainMapping($uid);
+        if ($this->settings['set_strip_domain'] === 'true') {
+            $uid = $this->doUserDomainMapping($uid);
         }
 
-        $exists = (bool)$this -> helper -> runQuery('userExists',
-                                            array('uid' => $uid));;
-        $this -> setCache ($cacheKey, $exists, 60);
+        $exists = (bool)$this->helper->runQuery('userExists',
+            array('uid' => $uid));;
+        $this->setCache($cacheKey, $exists, 60);
 
-        if(!$exists)
-        {
+        if (!$exists) {
             Util::writeLog('OC_USER_TYPO3',
-                    "Empty row, user does not exists, return false",
-                    Util::DEBUG);
+                "Empty row, user does not exists, return false",
+                Util::DEBUG);
             return false;
-        } else
-        {
+        } else {
             Util::writeLog('OC_USER_TYPO3', "User exists, return true",
                 Util::DEBUG);
             return true;
@@ -558,32 +456,29 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     public function getDisplayName($uid)
     {
         Util::writeLog('OC_USER_TYPO3',
-                "Entering getDisplayName() for UID: $uid",
-                Util::DEBUG);
+            "Entering getDisplayName() for UID: $uid",
+            Util::DEBUG);
 
-        $this -> doEmailSync($uid);
-        $uid = $this -> doUserDomainMapping($uid);
+        $this->doEmailSync($uid);
+        $uid = $this->doUserDomainMapping($uid);
 
-        if(!$this -> userExists($uid))
-        {
+        if (!$this->userExists($uid)) {
             return false;
         }
 
-        $row = $this -> helper -> runQuery('getDisplayName',
-                                            array('uid' => $uid));
+        $row = $this->helper->runQuery('getDisplayName',
+            array('uid' => $uid));
 
-        if(!$row)
-        {
+        if (!$row) {
             Util::writeLog('OC_USER_TYPO3',
-            "Empty row, user has no display name or ".
-            "does not exist, return false",
-            Util::DEBUG);
+                "Empty row, user has no display name or " .
+                "does not exist, return false",
+                Util::DEBUG);
             return false;
-        } else
-        {
+        } else {
             Util::writeLog('OC_USER_TYPO3',
-                                "User exists, return true",
-                                Util::DEBUG);
+                "User exists, return true",
+                Util::DEBUG);
             $displayName = $row['name'];
             return $displayName;
         }
@@ -591,11 +486,10 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
 
     public function getDisplayNames($search = '', $limit = null, $offset = null)
     {
-        $uids = $this -> getUsers($search, $limit, $offset);
+        $uids = $this->getUsers($search, $limit, $offset);
         $displayNames = array();
-        foreach($uids as $uid)
-        {
-            $displayNames[$uid] = $this -> getDisplayName($uid);
+        foreach ($uids as $uid) {
+            $displayNames[$uid] = $this->getDisplayName($uid);
         }
         return $displayNames;
     }
@@ -610,258 +504,52 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     }
 
     /**
-     * The following functions were directly taken from PostfixAdmin and just
-     * slightly modified
-     * to suit our needs.
-     * Encrypt a password,using the apparopriate hashing mechanism as defined in
-     * config.inc.php ($this->crypt_type).
-     * When wanting to compare one pw to another, it's necessary to provide the
-     * salt used - hence
-     * the second parameter ($pw_db), which is the existing hash from the DB.
-     *
-     * @param string $pw        cleartext password
-     * @param string $pw_db     encrypted password from database
-     * @return string encrypted password.
+     * @return bool|AbstractSalt|SaltInterface
      */
-    private function pacrypt($pw, $pw_db = "")
+    protected function getSaltingInstance($saltedHash = '')
     {
-        Util::writeLog('OC_USER_TYPO3', "Entering private pacrypt()",
-                                        Util::DEBUG);
-        $pw = stripslashes($pw);
-        $password = "";
-        $salt = "";
-
-        if($this -> settings['set_crypt_type'] === 'md5crypt')
-        {
-            $split_salt = preg_split('/\$/', $pw_db);
-            if(isset($split_salt[2]))
-            {
-                $salt = $split_salt[2];
+        require_once(__DIR__ . '/../Salt/SaltInterface.php');
+        require_once(__DIR__ . '/../Salt/AbstractSalt.php');
+        if (empty($saltedHash)) {
+            return $this->getSaltingInstanceInternal($this->settings['set_crypt_type']);
+        } else {
+            foreach (['typo3_md5', 'typo3_blowfish', 'typo3_phpass', 'typo3_pbkdf2'] as $cryptType) {
+                $saltingInstance = $this->getSaltingInstanceInternal($cryptType);
+                if ($saltingInstance->isValidSaltedPW($saltedHash)) {
+                    return $saltingInstance;
+                }
             }
-            $password = $this -> md5crypt($pw, $salt);
-        } elseif($this -> settings['set_crypt_type'] === 'md5')
-        {
-            $password = md5($pw);
-        } elseif($this -> settings['set_crypt_type'] === 'system')
-        {
-            // We never generate salts, as user creation is not allowed here
-            $password = crypt($pw, $pw_db);
-        } elseif($this -> settings['set_crypt_type'] === 'cleartext')
-        {
-            $password = $pw;
         }
 
-// See
-// https://sourceforge.net/tracker/?func=detail&atid=937966&aid=1793352&group_id=191583
-// this is apparently useful for pam_mysql etc.
-        elseif($this -> settings['set_crypt_type'] === 'mysql_encrypt')
-        {
-            if($pw_db !== "")
-            {
-                $salt = substr($pw_db, 0, 2);
-
-                $row = $this -> helper -> runQuery('mysqlEncryptSalt',
-                                    array('pw' => $pw, 'salt' => $salt));
-            } else
-            {
-                $row = $this -> helper -> runQuery('mysqlEncrypt',
-                                                    array('pw' => $pw));
-            }
-
-            if($row === false)
-            {
-                return false;
-            }
-            $password = $row[0];
-        } elseif($this -> settings['set_crypt_type'] === 'mysql_password')
-        {
-            $row = $this -> helper -> runQuery('mysqlPassword',
-                                                array('pw' => $pw));
-
-            if($row === false)
-            {
-                return false;
-            }
-            $password = $row[0];
-        }
-
-        // The following is by Frédéric France
-        elseif($this -> settings['set_crypt_type'] === 'joomla')
-        {
-            $split_salt = preg_split('/:/', $pw_db);
-            if(isset($split_salt[1]))
-            {
-                $salt = $split_salt[1];
-            }
-            $password = ($salt) ? md5($pw . $salt) : md5($pw);
-            $password .= ':' . $salt;
-        }
-
-        elseif($this-> settings['set_crypt_type'] === 'ssha256')
-        {
-            $salted_password = base64_decode(
-                                    preg_replace('/{SSHA256}/i','',$pw_db));
-            $salt = substr($salted_password,-(strlen($salted_password)-32));
-            $password = $this->ssha256($pw,$salt);
-        } else
-        {
-            Util::writeLog('OC_USER_TYPO3',
-                    "unknown/invalid crypt_type settings: ".
-                    $this->settings['set_crypt_type'],
-                    Util::ERROR);
-            die('unknown/invalid Encryption type setting: ' .
-                $this -> settings['set_crypt_type']);
-        }
-        Util::writeLog('OC_USER_TYPO3', "pacrypt() done, return",
-                            Util::DEBUG);
-        return $password;
+        return false;
     }
 
     /**
-     * md5crypt
-     * Creates MD5 encrypted password
-     * @param string $pw    The password to encrypt
-     * @param string $salt  The salt to use
-     * @param string $magic ?
-     * @return string The encrypted password
+     * @param string $cryptType
+     * @return BlowfishSalt|Md5Salt|Pbkdf2Salt|PhpassSalt
      */
-
-    private function md5crypt($pw, $salt = "", $magic = "")
+    protected function getSaltingInstanceInternal($cryptType)
     {
-        $MAGIC = "$1$";
-
-        if($magic === "")
-            $magic = $MAGIC;
-        if($salt === "")
-            $salt = $this -> create_md5salt();
-        $slist = explode("$", $salt);
-        if($slist[0] === "1")
-            $salt = $slist[1];
-
-        $salt = substr($salt, 0, 8);
-        $ctx = $pw . $magic . $salt;
-        $final = $this -> pahex2bin(md5($pw . $salt . $pw));
-
-        for($i = strlen($pw); $i > 0; $i -= 16)
-        {
-            if($i > 16)
-            {
-                $ctx .= substr($final, 0, 16);
-            } else
-            {
-                $ctx .= substr($final, 0, $i);
-            }
+        switch ($cryptType) {
+            case 'typo3_md5':
+                require_once(__DIR__ . '/../Salt/Md5Salt.php');
+                $saltingInstance = new Md5Salt();
+                break;
+            case 'typo3_blowfish':
+                require_once(__DIR__ . '/../Salt/BlowfishSalt.php');
+                $saltingInstance = new BlowfishSalt();
+                break;
+            case 'typo3_phpass':
+                require_once(__DIR__ . '/../Salt/PhpassSalt.php');
+                $saltingInstance = new PhpassSalt();
+                break;
+            case 'typo3_pbkdf2':
+                require_once(__DIR__ . '/../Salt/Pbkdf2Salt.php');
+                $saltingInstance = new Pbkdf2Salt();
+                break;
         }
-        $i = strlen($pw);
 
-        while($i > 0)
-        {
-            if($i & 1)
-                $ctx .= chr(0);
-            else
-                $ctx .= $pw[0];
-            $i = $i>>1;
-        }
-        $final = $this -> pahex2bin(md5($ctx));
-
-        for($i = 0; $i < 1000; $i++)
-        {
-            $ctx1 = "";
-            if($i & 1)
-            {
-                $ctx1 .= $pw;
-            } else
-            {
-                $ctx1 .= substr($final, 0, 16);
-            }
-            if($i % 3)
-                $ctx1 .= $salt;
-            if($i % 7)
-                $ctx1 .= $pw;
-            if($i & 1)
-            {
-                $ctx1 .= substr($final, 0, 16);
-            } else
-            {
-                $ctx1 .= $pw;
-            }
-            $final = $this -> pahex2bin(md5($ctx1));
-        }
-        $passwd = "";
-        $passwd .= $this -> to64(((ord($final[0])<<16) |
-                            (ord($final[6])<<8) | (ord($final[12]))), 4);
-        $passwd .= $this -> to64(((ord($final[1])<<16) |
-                            (ord($final[7])<<8) | (ord($final[13]))), 4);
-        $passwd .= $this -> to64(((ord($final[2])<<16) |
-                            (ord($final[8])<<8) | (ord($final[14]))), 4);
-        $passwd .= $this -> to64(((ord($final[3])<<16) |
-                            (ord($final[9])<<8) | (ord($final[15]))), 4);
-        $passwd .= $this -> to64(((ord($final[4])<<16) |
-                            (ord($final[10])<<8) | (ord($final[5]))), 4);
-        $passwd .= $this -> to64(ord($final[11]), 2);
-        return "$magic$salt\$$passwd";
-    }
-
-    /**
-     * Create a new salte
-     * @return string The salt
-     */
-    private function create_md5salt()
-    {
-        srand((double) microtime() * 1000000);
-        $salt = substr(md5(rand(0, 9999999)), 0, 8);
-        return $salt;
-    }
-
-    /**
-     * Encrypt using SSHA256 algorithm
-     * @param string $pw   The password
-     * @param string $salt The salt to use
-     * @return string The hashed password, prefixed by {SSHA256}
-     */
-    private function ssha256($pw, $salt)
-    {
-        return '{SSHA256}'.base64_encode(hash('sha256',$pw.$salt,true).$salt);
-    }
-
-    /**
-     * PostfixAdmin's hex2bin function
-     * @param string $str The string to convert
-     * @return string The converted string
-     */
-    private function pahex2bin($str)
-    {
-        if(function_exists('hex2bin'))
-        {
-            return hex2bin($str);
-        } else
-        {
-            $len = strlen($str);
-            $nstr = "";
-            for($i = 0; $i < $len; $i += 2)
-            {
-                $num = sscanf(substr($str, $i, 2), "%x");
-                $nstr .= chr($num[0]);
-            }
-            return $nstr;
-        }
-    }
-
-    /**
-     * Convert to 64?
-     */
-    private function to64($v, $n)
-    {
-           $ITOA64 =
-           "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        $ret = "";
-        while(($n - 1) >= 0)
-        {
-            $n--;
-            $ret .= $ITOA64[$v & 0x3f];
-            $v = $v>>6;
-        }
-        return $ret;
+        return $saltingInstance;
     }
 
     /**
@@ -910,24 +598,6 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
             $retVal = $this -> cache -> get ($key);
         }
         return $retVal;
-    }
-
-    private function create_systemsalt($length=20)
-    {
-        $fp = fopen('/dev/urandom', 'r');
-        $randomString = fread($fp, $length);
-        fclose($fp);
-        $salt = base64_encode($randomString);
-        return $salt;
-    }
-
-    private function pw_hash($password)
-    {
-        $options = [
-                    'cost' => 10,
-                   ];
-        return password_hash($password, PASSWORD_BCRYPT, $options);
-
     }
 
     function hash_equals( $a, $b ) {

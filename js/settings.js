@@ -106,45 +106,6 @@ user_typo3.adminSettingsUI = function()
         $('#sql_domain_chooser').change(function() {
            user_typo3.loadDomainSettings($('#sql_domain_chooser option:selected').val());
         });
-        
-        $('#set_gethome_mode').change(function() {
-           user_typo3.setGethomeMode();
-        });
-        
-        $('#set_enable_gethome').change(function() {
-            user_typo3.setGethomeMode();
-        });
-    }
-};
-
-user_typo3.setGethomeMode = function()
-{
-    var enabled = $('#set_enable_gethome').prop('checked');
-    if(enabled)
-    {
-        $('#set_gethome_mode').prop('disabled', false);
-        var val = $('#set_gethome_mode option:selected').val();
-        if(val === 'query')
-        {
-            $('#set_gethome').prop('disabled', true);
-            $('#col_gethome').prop('disabled', false);
-        }
-        else if(val === 'static')
-        {
-            $('#set_gethome').prop('disabled', false);
-            $('#col_gethome').prop('disabled', true);
-        }
-        else
-        {
-            $('#set_gethome').prop('disabled', true);
-            $('#col_gethome').prop('disabled', true);
-        }
-    }
-    else
-    {
-        $('#set_gethome_mode').prop('disabled', true);
-        $('#set_gethome').prop('disabled', true);
-        $('#col_gethome').prop('disabled', true);
     }
 };
 
@@ -200,13 +161,6 @@ user_typo3.loadDomainSettings = function(domain)
                         else
                             $('#' + key).prop('checked', false);
                     }
-                    else if(key == 'set_enable_gethome')
-                    {
-                        if(data.settings[key] == 'true')
-                            $('#' + key).prop('checked', true);
-                        else
-                            $('#' + key).prop('checked', false);
-                    }
                     else
                     {
                         $('#' + key).val(data.settings[key]);
@@ -218,7 +172,6 @@ user_typo3.loadDomainSettings = function(domain)
                 $('#sql_error_message').html(data.data.message);
                 $('#sql_error_message').show();
             }
-            user_typo3.setGethomeMode();
         }, 'json'
     );
 };
@@ -230,7 +183,6 @@ $(document).ready(function()
     {
         user_typo3.adminSettingsUI();
         user_typo3.loadDomainSettings($('#sql_domain_chooser option:selected').val());
-        user_typo3.setGethomeMode();
     }
 });
 

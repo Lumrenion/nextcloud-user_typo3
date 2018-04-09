@@ -18,10 +18,9 @@ $cfgClass =  'section';
     </select>
     <ul>
       <li><a id="sqlBasicSettings" href="#sql-1"><?php p($l -> t('Connection Settings')); ?></a></li>
-      <li><a id="sqlColSettings" href="#sql-2"><?php p($l -> t('Column Settings')); ?></a></li>
+      <li><a id="sqlPasswordSettings" href="#sql-2"><?php p($l -> t('Password Settings')); ?></a></li>
       <li><a id="sqlEmailSettings" href="#sql-3"><?php p($l -> t('E-Mail Settings')); ?></a></li>
       <li><a id="sqlDomainSettings" href="#sql-4"><?php p($l -> t('Domain Settings')); ?></a></li>
-      <li><a id="sqlGethomeSettings" href="#sql-5"><?php p($l -> t('getHome Settings')); ?></a></li>
     </ul>
 
         <fieldset id="sql-1">
@@ -53,27 +52,29 @@ $cfgClass =  'section';
 
         </fieldset>
         <fieldset id="sql-2">
-            <p><label for="set_allow_pwchange"><?php p($l -> t('Allow password changing (read README!)')); ?></label><input type="checkbox" id="set_allow_pwchange" name="set_allow_pwchange" value="1"<?php
+            <p><label for="set_allow_pwchange"><?php p($l -> t('Allow password changing')); ?></label><input type="checkbox" id="set_allow_pwchange" name="set_allow_pwchange" value="1"<?php
             if($_['set_allow_pwchange'])
                 p(' checked');
  ?>><br>
- <em><?php p($l -> t('Allow changing passwords. Imposes a security risk if password salts are not recreated.')); ?></em></p>
- <em><?php p($l -> t('Only the encryption types "System","password_hash" and "Joomla2" are safe.')); ?></em></p>
 
             <p><label for="set_crypt_type"><?php p($l -> t('Encryption Type')); ?></label>
-                <?php $crypt_types = array('md5' => 'MD5', 'md5crypt' => 'MD5 Crypt', 'cleartext' => 'Cleartext', 'mysql_encrypt' => 'mySQL ENCRYPT()', 'system' => 'System (crypt)', 'password_hash' => 'password_hash','mysql_password' => 'mySQL PASSWORD()', 'joomla' => 'Joomla MD5 Encryption', 'joomla2' => 'Joomla > 2.5.18 phpass', 'ssha256' => 'Salted SSHA256', 'redmine' => 'Redmine', 'sha1' => 'SHA1'); ?>
+                <?php $crypt_types = array(
+                        'typo3_md5' => 'MD5 salted hashing (secure)', 'typo3_blowfish' => 'Blowfish salted hashing (advanced)',
+                        'typo3_phpass' => 'Portable PHP password hashing (phpass)', 'typo3_pbkdf2' => 'PBKDF2 key derivation (advanced)');
+                $selected_crypt_type = empty($_['set_crypt_type']) ? 'phpass' : $_['set_crypt_type']; ?>
                 <select id="set_crypt_type" name="set_crypt_type">
                     <?php
                         foreach ($crypt_types as $driver => $name):
                             //echo $_['set_crypt_type'];
-                            if($_['set_crypt_type'] === $driver): ?>
+                            if($selected_crypt_type === $driver): ?>
                                 <option selected="selected" value="<?php p($driver); ?>"><?php p($name); ?></option>
                             <?php else: ?>
                                 <option value="<?php p($driver); ?>"><?php p($name); ?></option>
                             <?php endif;
                         endforeach;
                     ?>
-                </select>
+                </select><br>
+                <em><?php p($l->t('Only required if changing password is allowed. Encryption type for login will be determined automagically.')) ?></em>
             </p>
         </fieldset>
 
@@ -107,35 +108,6 @@ $cfgClass =  'section';
                 p(' checked');
             ?> /><br>
             <em><?php p($l -> t("Strip Domain Part including @-sign from Username when logging in and retrieving username lists")); ?></em></p>
-
-        </fieldset>
-
-        <fieldset id="sql-5">
-           <p><label for="set_enable_gethome"><?php p($l -> t('Enable support for getHome()')); ?></label><input type="checkbox" id="set_enable_gethome", name="set_enable_gethome" value="1" <?php
-            if($_['set_enable_gethome'])
-                p(' checked');
-            ?>/></p>
-
-            <p><label for="set_gethome_mode"><?php p($l -> t('Method for getHome')); ?></label>
-                <?php $gethome_modes = array('query' => 'SQL Column', 'static' => 'Static (with Variables)'); ?>
-                <select id="set_gethome_mode" name="set_gethome_mode">
-                    <?php
-                    foreach ($gethome_modes as $mode => $name):
-                        //echo $_['set_mail_sync_mode'];
-                        if($_['set_gethome_mode'] === $mode): ?>
-                            <option selected="selected" value="<?php p($mode); ?>"><?php p($name); ?></option>
-                        <?php else: ?>
-                            <option value="<?php p($mode); ?>"><?php p($name); ?></option>
-                        <?php endif;
-                    endforeach;
-                    ?>
-                </select>
-            </p>
-
-            <p><label for="col_gethome"><?php p($l -> t('Home Column')); ?></label><input type="text" id="col_gethome" name="col_gethome" value="<?php p($_['col_gethome']); ?>"></p>
-
-            <p><label for="set_gethome"><?php p($l -> t('Home Dir')); ?></label><input type="text" id="set_gethome" name="set_gethome" value="<?php p($_['set_gethome']); ?>"><br>
-            <em><?php p($l -> t('You can use the placeholders %%u to specify the user ID (before appending the default domain), %%ud to specify the user ID (after appending the default domain) and %%d to specify the default domain')); ?></em></p>
 
         </fieldset>
 

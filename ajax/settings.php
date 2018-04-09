@@ -100,10 +100,6 @@ if(isset($_POST['appname']) && ($_POST['appname'] === 'user_typo3') && isset($_P
                     {
                         \OC::$server->getConfig()->setAppValue('user_typo3', 'set_active_invert_'.$domain, 'true');
                     }
-                    elseif($param === 'set_enable_gethome')
-                    {
-                        \OC::$server->getConfig()->setAppValue('user_typo3', 'set_enable_gethome_'.$domain, 'true');
-                    }
                     else
                     {
                         \OC::$server->getConfig()->setAppValue('user_typo3', $param.'_'.$domain, $_POST[$param]);
@@ -121,10 +117,6 @@ if(isset($_POST['appname']) && ($_POST['appname'] === 'user_typo3') && isset($_P
                     elseif($param === 'set_active_invert')
                     {
                         \OC::$server->getConfig()->setAppValue('user_typo3', 'set_active_invert_'.$domain, 'false');
-                    }
-                    elseif($param === 'set_enable_gethome')
-                    {
-                        \OC::$server->getConfig()->setAppValue('user_typo3', 'set_enable_gethome_'.$domain, 'false');
                     }
                 }
             }

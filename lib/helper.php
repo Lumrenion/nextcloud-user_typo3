@@ -51,14 +51,11 @@ class Helper {
             'sql_password',
             'sql_database',
             'sql_driver',
-            'col_gethome',
             'set_default_domain',
             'set_strip_domain',
             'set_crypt_type',
             'set_mail_sync_mode',
-            'set_enable_gethome',
-            'set_gethome_mode',
-            'set_gethome',
+            'set_allow_pwchange'
         );
 
         return $params;
@@ -105,9 +102,6 @@ class Helper {
 
         switch($type)
         {
-            case 'getHome':
-                $query = "SELECT ".$this->settings['col_gethome']." FROM fe_users WHERE username = :uid";
-            break;
             case 'getMail':
                 $query = "SELECT email FROM fe_users WHERE username = :uid";
             break;
