@@ -18,9 +18,8 @@ $cfgClass =  'section';
     </select>
     <ul>
       <li><a id="sqlBasicSettings" href="#sql-1"><?php p($l -> t('Connection Settings')); ?></a></li>
-      <li><a id="sqlPasswordSettings" href="#sql-2"><?php p($l -> t('Password Settings')); ?></a></li>
-      <li><a id="sqlEmailSettings" href="#sql-3"><?php p($l -> t('E-Mail Settings')); ?></a></li>
-      <li><a id="sqlDomainSettings" href="#sql-4"><?php p($l -> t('Domain Settings')); ?></a></li>
+      <li><a id="sqlPasswordSettings" href="#sql-2"><?php p($l -> t('Additional Configuration')); ?></a></li>
+      <li><a id="sqlDomainSettings" href="#sql-3"><?php p($l -> t('Domain Settings')); ?></a></li>
     </ul>
 
         <fieldset id="sql-1">
@@ -80,10 +79,9 @@ $cfgClass =  'section';
                 </select>
                 <br><em><?php p($l->t('Only required if changing password is allowed. Encryption type for login will be determined automagically.')) ?></em>
             </p>
-        </fieldset>
 
-        <fieldset id="sql-3">
-            <p><label for="set_mail_sync_mode"><?php p($l -> t('E-Mail address sync mode')); ?></label>
+            <p>
+                <label for="set_mail_sync_mode"><?php p($l -> t('E-Mail address sync mode')); ?></label>
                 <?php $mail_modes = array('none' => 'No Synchronisation', 'initial' => 'Synchronise only once', 'forceoc' => 'Nextcloud always wins', 'forcesql' => 'SQL always wins'); ?>
                 <select id="set_mail_sync_mode" name="set_mail_sync_mode" style="width: 400px;">
                     <?php
@@ -98,10 +96,9 @@ $cfgClass =  'section';
                     ?>
                 </select>
             </p>
-
         </fieldset>
 
-        <fieldset id="sql-4">
+        <fieldset id="sql-3">
 
             <p><label for="set_default_domain"><?php p($l -> t('Append Default Domain')); ?></label>
                 <input type="text" id="set_default_domain", name="set_default_domain" style="width: 400px;"
