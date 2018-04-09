@@ -26,7 +26,7 @@ $cfgClass =  'section';
         <fieldset id="sql-1">
            <p><label for="sql_driver"><?php p($l -> t('SQL Driver')); ?></label>
                 <?php $db_driver = array('mysql' => 'MySQL', 'pgsql' => 'PostgreSQL'); ?>
-                <select id="sql_driver" name="sql_driver">
+                <select id="sql_driver" name="sql_driver" style="width: 400px;">
                     <?php
                         foreach ($db_driver as $driver => $name):
                             //echo $_['sql_driver'];
@@ -40,29 +40,33 @@ $cfgClass =  'section';
                 </select>
             </p>
 
-            <p><label for="sql_hostname"><?php p($l -> t('Host')); ?></label><input type="text" id="sql_hostname" name="sql_hostname" value="<?php p($_['sql_hostname']); ?>"></p>
+            <p><label for="sql_hostname"><?php p($l -> t('Host')); ?></label><input type="text" id="sql_hostname" name="sql_hostname" style="width: 400px;" value="<?php p($_['sql_hostname']); ?>"></p>
 
-            <p><label for="sql_database"><?php p($l -> t('Database')); ?></label><input type="text" id="sql_database" name="sql_database" value="<?php p($_['sql_database']); ?>" /></p>
+            <p><label for="sql_database"><?php p($l -> t('Database')); ?></label><input type="text" id="sql_database" name="sql_database" style="width: 400px;" value="<?php p($_['sql_database']); ?>" /></p>
 
-            <p><label for="sql_username"><?php p($l -> t('Username')); ?></label><input type="text" id="sql_username" name="sql_username" value="<?php p($_['sql_username']); ?>" /></p>
+            <p><label for="sql_username"><?php p($l -> t('Username')); ?></label><input type="text" id="sql_username" name="sql_username" style="width: 400px;" value="<?php p($_['sql_username']); ?>" /></p>
 
-            <p><label for="sql_password"><?php p($l -> t('Password')); ?></label><input type="password" id="sql_password" name="sql_password" value="<?php p($_['sql_password']); ?>" /></p>
+            <p><label for="sql_password"><?php p($l -> t('Password')); ?></label><input type="password" id="sql_password" name="sql_password" style="width: 400px;" value="<?php p($_['sql_password']); ?>" /></p>
 
             <p><input type="submit" id="sqlVerify" value="<?php p($l -> t('Verify Settings')); ?>"></p>
 
         </fieldset>
         <fieldset id="sql-2">
+            <p>
+                <label for="set_admin_groups"><?php p($l->t('Admin groups')); ?></label>
+                <input name="set_admin_groups" type="hidden" id="set_admin_groups" value="<?php p($_['set_admin_groups']) ?>" style="width: 400px"><br />
+            </p>
             <p><label for="set_allow_pwchange"><?php p($l -> t('Allow password changing')); ?></label><input type="checkbox" id="set_allow_pwchange" name="set_allow_pwchange" value="1"<?php
             if($_['set_allow_pwchange'])
                 p(' checked');
- ?>><br>
+ ?>>
 
             <p><label for="set_crypt_type"><?php p($l -> t('Encryption Type')); ?></label>
                 <?php $crypt_types = array(
                         'typo3_md5' => 'MD5 salted hashing (secure)', 'typo3_blowfish' => 'Blowfish salted hashing (advanced)',
                         'typo3_phpass' => 'Portable PHP password hashing (phpass)', 'typo3_pbkdf2' => 'PBKDF2 key derivation (advanced)');
                 $selected_crypt_type = empty($_['set_crypt_type']) ? 'phpass' : $_['set_crypt_type']; ?>
-                <select id="set_crypt_type" name="set_crypt_type">
+                <select id="set_crypt_type" name="set_crypt_type" style="width: 400px;">
                     <?php
                         foreach ($crypt_types as $driver => $name):
                             //echo $_['set_crypt_type'];
@@ -73,15 +77,15 @@ $cfgClass =  'section';
                             <?php endif;
                         endforeach;
                     ?>
-                </select><br>
-                <em><?php p($l->t('Only required if changing password is allowed. Encryption type for login will be determined automagically.')) ?></em>
+                </select>
+                <br><em><?php p($l->t('Only required if changing password is allowed. Encryption type for login will be determined automagically.')) ?></em>
             </p>
         </fieldset>
 
         <fieldset id="sql-3">
             <p><label for="set_mail_sync_mode"><?php p($l -> t('E-Mail address sync mode')); ?></label>
                 <?php $mail_modes = array('none' => 'No Synchronisation', 'initial' => 'Synchronise only once', 'forceoc' => 'Nextcloud always wins', 'forcesql' => 'SQL always wins'); ?>
-                <select id="set_mail_sync_mode" name="set_mail_sync_mode">
+                <select id="set_mail_sync_mode" name="set_mail_sync_mode" style="width: 400px;">
                     <?php
                     foreach ($mail_modes as $mode => $name):
                         //echo $_['set_mail_sync_mode'];
@@ -99,14 +103,17 @@ $cfgClass =  'section';
 
         <fieldset id="sql-4">
 
-            <p><label for="set_default_domain"><?php p($l -> t('Append Default Domain')); ?></label><input type="text" id="set_default_domain", name="set_default_domain" value="<?php p($_['set_default_domain']); ?>" /><br>
-                <em><?php p($l -> t('Append this string, e.g. a domain name, to each user name. The @-sign is automatically inserted.')); ?></em>
+            <p><label for="set_default_domain"><?php p($l -> t('Append Default Domain')); ?></label>
+                <input type="text" id="set_default_domain", name="set_default_domain" style="width: 400px;"
+                       value="<?php p($_['set_default_domain']); ?>" />
+                <br><em><?php p($l -> t('Append this string, e.g. a domain name, to each user name. The @-sign is automatically inserted.')); ?></em>
             </p>
 
-            <p><label for="set_strip_domain"><?php p($l -> t('Strip Domain Part from Username')); ?></label><input type="checkbox" id="set_strip_domain" name="set_strip_domain" value="1"<?php
+            <p><label for="set_strip_domain"><?php p($l -> t('Strip Domain Part from Username')); ?></label>
+                <input type="checkbox" id="set_strip_domain" name="set_strip_domain" value="1"<?php
             if($_['set_strip_domain'])
                 p(' checked');
-            ?> /><br>
+            ?> />
             <em><?php p($l -> t("Strip Domain Part including @-sign from Username when logging in and retrieving username lists")); ?></em></p>
 
         </fieldset>

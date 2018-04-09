@@ -5,7 +5,7 @@ namespace OCA\user_typo3;
 use \OCA\user_typo3\lib\Helper;
 use OCP\Util;
 
-class OC_GROUP_TYPO3 extends \OC_Group_Backend implements \OCP\GroupInterface
+class OC_GROUP_TYPO3 extends \OC\Group\Backend
 {
     protected $settings;
     protected $helper;
@@ -30,7 +30,17 @@ class OC_GROUP_TYPO3 extends \OC_Group_Backend implements \OCP\GroupInterface
         foreach($rows as $row)
         {
             $groups[] = $row['title'];
-        } 
+        }
+        if (!empty($this->settings['set_admin_groups'])) {
+            // If the user is in one of the selected administrator groups, the nextcloud admin group is added to the list
+            if (!in_array(Helper::OC_ADMIN_GROUP, $groups)) {
+                $adminGroups = explode('|', $this->settings['set_admin_groups']);
+                if (count(array_intersect($adminGroups, $groups)) > 0) {
+
+                    $groups[] = Helper::OC_ADMIN_GROUP;
+                }
+            }
+        }
         return $groups;
     }
 
@@ -45,7 +55,11 @@ class OC_GROUP_TYPO3 extends \OC_Group_Backend implements \OCP\GroupInterface
         foreach($rows as $row)
         {
             $groups[] = $row['title'];
-        }   
+        }
+        // we need to add admin group to the groups supported by this app so typo3 users are processed when viewing this group in backend
+        if (!in_array(Helper::OC_ADMIN_GROUP, $groups)) {
+            $groups[] = Helper::OC_ADMIN_GROUP;
+        }
         return $groups;
     }
 

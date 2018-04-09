@@ -176,6 +176,34 @@ user_typo3.loadDomainSettings = function(domain)
     );
 };
 
+user_typo3.initSelect2 = function() {
+    var $adminGroupsInput = $('#set_admin_groups');
+    OC.Settings.setupGroupsSelect($adminGroupsInput);
+    // $adminGroupsInput.select2({
+    //     ajax: {
+    //         url: OC.filePath('user_typo3', 'ajax', 'settings.php'),
+    //         method: 'POST',
+    //         dataType: 'json',
+    //         delay: 250,
+    //         data: function (params) {
+    //             var data = $('#sqlForm').serializeArray();
+    //             var domain = $('#sql_domain_chooser option:selected').val();
+    //
+    //             data.push({
+    //                 name: 'function',
+    //                 value: 'getGroupAutocomplete'
+    //             });
+    //             data.push({
+    //                 name: 'search',
+    //                 value: params.term
+    //             });
+    //
+    //             return data;
+    //         }
+    //     }
+    // });
+};
+
 // Run our JS if the SQL settings are present
 $(document).ready(function()
 {
@@ -183,6 +211,7 @@ $(document).ready(function()
     {
         user_typo3.adminSettingsUI();
         user_typo3.loadDomainSettings($('#sql_domain_chooser option:selected').val());
+        user_typo3.initSelect2();
     }
 });
 

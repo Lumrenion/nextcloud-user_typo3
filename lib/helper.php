@@ -27,6 +27,7 @@ use OCP\Util;
 
 class Helper {
 
+    const OC_ADMIN_GROUP = 'admin';
     protected $db;
     protected $db_conn;
     protected $settings;
@@ -55,7 +56,8 @@ class Helper {
             'set_strip_domain',
             'set_crypt_type',
             'set_mail_sync_mode',
-            'set_allow_pwchange'
+            'set_allow_pwchange',
+            'set_admin_groups'
         );
 
         return $params;
@@ -155,11 +157,33 @@ class Helper {
             break;
 
             case 'getGroupUsers':
-                $query = "SELECT fe_users.username FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_groups.title = :gid";
+                $query = "SELECT DISTINCT fe_users.username FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_groups.title = :gid";
+                if (!empty($this->settings['set_admin_groups'])) {
+                    // When finding users in group, if the group is nextcloud's admin group, all users that are in one of the defined admin groups should be queried as well
+                    if ($params['gid'] == self::OC_ADMIN_GROUP) {
+                        $adminGroups = explode('|', $this->settings['set_admin_groups']);
+                        foreach ($adminGroups as $index => $adminid) {
+                            $query .= ' OR fe_groups.title = :adminid' . $index;
+                            $params['adminid' . $index] = $adminid;
+                        }
+                    }
+                }
             break;
 
             case 'countUsersInGroup':
-                $query = "SELECT count(fe_users.uid) FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_groups.title = :gid AND fe_users.username LIKE :search";
+                $additionalAdminGroupsQuery = "";
+                if (!empty($this->settings['set_admin_groups'])) {
+                    // When finding users in group, if the group is nextcloud's admin group, all users that are in one of the defined admin groups should be counted as well
+                    if ($params['gid'] == self::OC_ADMIN_GROUP) {
+                        $adminGroups = explode('|', $this->settings['set_admin_groups']);
+                        foreach ($adminGroups as $index => $adminid) {
+                            $additionalAdminGroupsQuery .= ' OR fe_groups.title = :adminid' . $index;
+                            $params['adminid' . $index] = $adminid;
+                        }
+                    }
+                }
+
+                $query = "SELECT count(DISTINCT fe_users.uid) FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE (fe_groups.title = :gid" . $additionalAdminGroupsQuery . ") AND fe_users.username LIKE :search";
             break;
         }
 
