@@ -57,7 +57,8 @@ class Helper {
             'set_crypt_type',
             'set_mail_sync_mode',
             'set_allow_pwchange',
-            'set_admin_groups'
+            'set_admin_groups',
+            'set_import_groups'
         );
 
         return $params;
@@ -113,7 +114,8 @@ class Helper {
             break;
 
             case 'getPass':
-                $query = "SELECT password FROM fe_users WHERE username = :uid AND disable = 0";
+                $additionalWhereClause = '1=1 AND deleted = 0 AND disable = 0';
+                $query = "SELECT password FROM fe_users WHERE username = :uid AND $additionalWhereClause";
             break;
 
             case 'setPass':
@@ -121,19 +123,27 @@ class Helper {
             break;
 
             case 'countUsers':
-                $query = "SELECT COUNT(*) FROM fe_users WHERE username LIKE :search AND disable = 0";
+                $additionalWhereClause = '1=1 AND deleted = 0 AND disable = 0';
+                $additionalWhereClause .= $this->getUsergroupsAdditionalWhereClause($params);
+
+                $query = "SELECT COUNT(*) FROM fe_users WHERE username LIKE :search AND $additionalWhereClause";
             break;
 
             case 'getUsers':
-                $query = "SELECT username FROM fe_users WHERE username LIKE :search AND disable = 0 ORDER BY username";
+                $additionalWhereClause = '1=1 AND fe_users.deleted = 0 AND fe_users.disable = 0';
+                $additionalWhereClause .= $this->getUsergroupsAdditionalWhereClause($params);
+
+                $query = "SELECT fe_users.username FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_users.username LIKE :search AND $additionalWhereClause ORDER BY fe_users.username";
             break;
 
             case 'userExists':
-                $query = "SELECT username FROM fe_users WHERE username = :uid AND disable = 0";
+                $additionalWhereClause = '1=1 AND deleted = 0 AND disable = 0';
+                $query = "SELECT username FROM fe_users WHERE username = :uid AND $additionalWhereClause";
             break;
 
             case 'getDisplayName':
-                $query = "SELECT `name` FROM fe_users WHERE username = :uid AND disable = 0";
+                $additionalWhereClause = '1=1 AND deleted = 0 AND disable = 0';
+                $query = "SELECT `name` FROM fe_users WHERE username = :uid AND $additionalWhereClause";
             break;
 
             case 'mysqlEncryptSalt':
@@ -149,42 +159,50 @@ class Helper {
             break;
 
             case 'getUserGroups':
-                $query = "SELECT fe_groups.title FROM fe_groups LEFT JOIN `fe_users` ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_users.username = :uid";
+                $additionalWhereClause = '1=1';
+                $additionalWhereClause .= $this->getUsergroupsAdditionalWhereClause($params);
+
+                $query = "SELECT fe_groups.title FROM fe_groups LEFT JOIN `fe_users` ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_users.username = :uid AND $additionalWhereClause";
             break;
 
             case 'getGroups':
-                $query = "SELECT title FROM fe_groups WHERE title LIKE :search";
+                $additionalWhereClause = '1=1';
+                $additionalWhereClause .= $this->getUsergroupsAdditionalWhereClause($params);
+
+                $query = "SELECT title FROM fe_groups WHERE title LIKE :search AND $additionalWhereClause";
             break;
 
             case 'getGroupUsers':
-                $query = "SELECT DISTINCT fe_users.username FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_groups.title = :gid";
-                if (!empty($this->settings['set_admin_groups'])) {
-                    // When finding users in group, if the group is nextcloud's admin group, all users that are in one of the defined admin groups should be queried as well
-                    if ($params['gid'] == self::OC_ADMIN_GROUP) {
-                        $adminGroups = explode('|', $this->settings['set_admin_groups']);
-                        foreach ($adminGroups as $index => $adminid) {
-                            $query .= ' OR fe_groups.title = :adminid' . $index;
-                            $params['adminid' . $index] = $adminid;
-                        }
+                $groupParams = [ ':gid' ];
+                if ($params['gid'] == self::OC_ADMIN_GROUP) {
+                    $adminGroups = explode('|', $this->settings['set_admin_groups']);
+                    foreach ($adminGroups as $index => $adminGroup) {
+                        $params['adminid' . $index] = $adminGroup;
+                        $groupParams[] = ':adminid' . $index;
                     }
                 }
-            break;
+                $inQuery = implode(', ', $groupParams);
+
+                $query = "SELECT DISTINCT fe_users.username FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_groups.title IN ($inQuery)";
+                break;
 
             case 'countUsersInGroup':
-                $additionalAdminGroupsQuery = "";
-                if (!empty($this->settings['set_admin_groups'])) {
-                    // When finding users in group, if the group is nextcloud's admin group, all users that are in one of the defined admin groups should be counted as well
-                    if ($params['gid'] == self::OC_ADMIN_GROUP) {
-                        $adminGroups = explode('|', $this->settings['set_admin_groups']);
-                        foreach ($adminGroups as $index => $adminid) {
-                            $additionalAdminGroupsQuery .= ' OR fe_groups.title = :adminid' . $index;
-                            $params['adminid' . $index] = $adminid;
-                        }
+                $groupParams = [ ':gid' ];
+                if ($params['gid'] == self::OC_ADMIN_GROUP) {
+                    $adminGroups = explode('|', $this->settings['set_admin_groups']);
+                    foreach ($adminGroups as $index => $adminGroup) {
+                        $params['adminid' . $index] = $adminGroup;
+                        $groupParams[] = ':adminid' . $index;
                     }
                 }
+                $inQuery = implode(', ', $groupParams);
 
-                $query = "SELECT count(DISTINCT fe_users.uid) FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE (fe_groups.title = :gid" . $additionalAdminGroupsQuery . ") AND fe_users.username LIKE :search";
-            break;
+                $query = "SELECT count(DISTINCT fe_users.uid) FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE fe_groups.title IN ($inQuery) AND fe_users.username LIKE :search";
+                break;
+
+            case 'getAllGroups':
+                $query = "SELECT title FROM fe_groups WHERE title LIKE :search";
+                break;
         }
 
         if(isset($limits['limit']) && $limits['limit'] !== null)
@@ -355,6 +373,27 @@ class Helper {
             default:
                 return null;
         }
+    }
+
+    protected function getUsergroupsAdditionalWhereClause(&$params)
+    {
+        $additionalWhereClause = '';
+        if (!empty($this->settings['set_import_groups'])) {
+            $userGroups = array_merge(
+                explode('|', $this->settings['set_import_groups']),
+                explode('|', $this->settings['set_admin_groups'])
+            );
+            $usergroupParams = [];
+            foreach ($userGroups as $index => $userGroup) {
+                $params['usergroupid' . $index] = $userGroup;
+                $usergroupParams[] = ':usergroupid' . $index;
+            }
+            if (!empty($usergroupParams)) {
+                $additionalWhereClause = ' AND fe_groups.title IN (' . implode(', ', $usergroupParams) . ')';
+            }
+        }
+
+        return $additionalWhereClause;
     }
 
 

@@ -50,6 +50,7 @@ You may want to select TYPO3 fe_groups as admin_groups. Users in those groups wi
 - sql_username
 - sql_password
 - sql_database
+- set_import_groups
 - set_admin_groups
 - set_allow_pwchange
 - set_crypt_type

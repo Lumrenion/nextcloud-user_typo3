@@ -52,6 +52,10 @@ $cfgClass =  'section';
         </fieldset>
         <fieldset id="sql-2">
             <p>
+                <label for="set_import_groups"><?php p($l->t('Import groups')); ?></label>
+                <input name="set_import_groups" type="hidden" id="set_import_groups" value="<?php p($_['set_import_groups']) ?>" style="width: 400px"><br />
+            </p>
+            <p>
                 <label for="set_admin_groups"><?php p($l->t('Admin groups')); ?></label>
                 <input name="set_admin_groups" type="hidden" id="set_admin_groups" value="<?php p($_['set_admin_groups']) ?>" style="width: 400px"><br />
             </p>

@@ -177,31 +177,48 @@ user_typo3.loadDomainSettings = function(domain)
 };
 
 user_typo3.initSelect2 = function() {
+    var getGroupsAutocomplete = {
+        query: _.debounce(function(query) {
+            var queryData = $('#sqlForm').serializeArray();
+
+            var domain = $('#sql_domain_chooser option:selected').val();
+
+            queryData.push({
+                name: 'function',
+                value: 'getGroupsAutocomplete'
+            });
+
+            queryData.push({
+                name: 'domain',
+                value: domain
+            });
+
+            queryData.push({
+                name: 'request',
+                value: query.term
+            });
+            $.ajax({
+                url: OC.filePath('user_typo3', 'ajax', 'settings.php'),
+                data: queryData,
+                method: 'POST',
+                dataType: 'json',
+                success: function(data) {
+                    var results = [];
+
+                    $.each(data.data.groups, function(i, group) {
+                        results.push({id:group.id, displayname:group.name});
+                    });
+
+                    query.callback({results: results});
+                }
+            });
+        }, 100, true)
+    };
+
     var $adminGroupsInput = $('#set_admin_groups');
-    OC.Settings.setupGroupsSelect($adminGroupsInput);
-    // $adminGroupsInput.select2({
-    //     ajax: {
-    //         url: OC.filePath('user_typo3', 'ajax', 'settings.php'),
-    //         method: 'POST',
-    //         dataType: 'json',
-    //         delay: 250,
-    //         data: function (params) {
-    //             var data = $('#sqlForm').serializeArray();
-    //             var domain = $('#sql_domain_chooser option:selected').val();
-    //
-    //             data.push({
-    //                 name: 'function',
-    //                 value: 'getGroupAutocomplete'
-    //             });
-    //             data.push({
-    //                 name: 'search',
-    //                 value: params.term
-    //             });
-    //
-    //             return data;
-    //         }
-    //     }
-    // });
+    OC.Settings.setupGroupsSelect($adminGroupsInput, getGroupsAutocomplete);
+    var $importGroupsInput = $('#set_import_groups');
+    OC.Settings.setupGroupsSelect($importGroupsInput, getGroupsAutocomplete)
 };
 
 // Run our JS if the SQL settings are present

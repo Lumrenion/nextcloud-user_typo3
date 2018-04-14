@@ -171,6 +171,33 @@ if(isset($_POST['appname']) && ($_POST['appname'] === 'user_typo3') && isset($_P
                             'data' => array('message' => $l -> t('Error connecting to database: ').$e->getMessage())));
             }
         break;
+
+        // Get the autocompletion values for a table
+        case 'getGroupsAutocomplete':
+            $parameters = array('sql_hostname' => $_POST['sql_hostname'],
+                'sql_password' => $_POST['sql_password'],
+                'sql_username' => $_POST['sql_username'],
+                'sql_database' => $_POST['sql_database'],
+                'tablePrefix' => '',
+                'sql_driver' => $_POST['sql_driver']
+            );
+            $helper -> connectToDb($parameters);
+            $search = "%" . $_POST['request'] . "%";
+            $rows = $helper->runQuery('getAllGroups', array('search' => $search), false, true);
+
+            $ret = array('data' => ['groups' => []]);
+            if($rows === false)
+            {
+                return $ret;
+            }
+
+            foreach($rows as $row)
+            {
+                $ret['data']['groups'][] = ['id' => $row['title'], 'name' => $row['title']];
+            }
+
+            $response->setData($ret);
+        break;
     }
 
 } else
