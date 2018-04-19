@@ -100,9 +100,6 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     {
         Util::writeLog('OC_USER_TYPO3', "Entering doEmailSync for UID: $uid",
             Util::DEBUG);
-        if ($this->settings['col_email'] === '') {
-            return false;
-        }
 
         if ($this->settings['set_mail_sync_mode'] === 'none') {
             return false;
@@ -585,7 +582,7 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
         if ($this -> cache === NULL)
         {
             if (isset($_SESSION[$this -> session_cache_name],
-                        $_SESSION[$this -> session_cache_name][$key]))
+                $_SESSION[$this -> session_cache_name][$key]))
             {
                 $value = $_SESSION[$this -> session_cache_name][$key];
                 if (time() < $value['time'] + $value['ttl'])
@@ -605,24 +602,24 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
 
         if ( $a_length !== strlen( $b ) ) {
             return false;
-            }
-            $result = 0;
+        }
+        $result = 0;
 
         // Do not attempt to "optimize" this.
         for ( $i = 0; $i < $a_length; $i++ ) {
-        $result |= ord( $a[ $i ] ) ^ ord( $b[ $i ] );
+            $result |= ord( $a[ $i ] ) ^ ord( $b[ $i ] );
         }
 
-            //Hide the length of the string
+        //Hide the length of the string
         $additional_length=200-($a_length % 200);
         $tmp=0;
-           $c="abCD";
+        $c="abCD";
         for ( $i = 0; $i < $additional_length; $i++ ) {
             $tmp |= ord( $c[ 0 ] ) ^ ord( $c[ 0 ] );
         }
 
         return $result === 0;
-}
+    }
 
 }
 
