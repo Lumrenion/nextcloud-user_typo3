@@ -123,7 +123,7 @@ class Helper {
             break;
 
             case 'countUsers':
-                $additionalWhereClause = '1=1 AND deleted = 0 AND disable = 0';
+                $additionalWhereClause = '1=1 AND fe_users.deleted = 0 AND fe_users.disable = 0';
                 $additionalWhereClause .= $this->getUsergroupsAdditionalWhereClause($params);
 
                 $query = "SELECT COUNT(DISTINCT fe_users.uid) FROM fe_users LEFT JOIN fe_groups ON FIND_IN_SET(fe_groups.uid, fe_users.usergroup) WHERE username LIKE :search AND $additionalWhereClause";
