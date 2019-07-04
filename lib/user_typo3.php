@@ -30,19 +30,17 @@
 namespace OCA\user_typo3;
 use OC\User\Backend;
 
-use \OCA\user_typo3\lib\Helper;
 use OCP\IConfig;
 use OCP\IUser;
 use OCP\IUserSession;
-use OCP\Notification\IManager as INotificationManager;
 use OCP\Util;
-use TYPO3\CMS\Saltedpasswords\Salt\AbstractSalt;
-use TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt;
-use TYPO3\CMS\Saltedpasswords\Salt\Md5Salt;
-use TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt;
-use TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt;
-use TYPO3\CMS\Saltedpasswords\Salt\SaltFactory;
-use TYPO3\CMS\Saltedpasswords\Salt\SaltInterface;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\Argon2iPasswordHash;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\BcryptPasswordHash;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\BlowfishPasswordHash;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\Md5PasswordHash;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashInterface;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\Pbkdf2PasswordHash;
+use TYPO3\CMS\Core\Crypto\PasswordHashing\PhpassPasswordHash;
 
 abstract class BackendUtility {
     protected $access;
@@ -501,16 +499,20 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
     }
 
     /**
-     * @return bool|AbstractSalt|SaltInterface
+     * @return bool|PasswordHashInterface
      */
     protected function getSaltingInstance($saltedHash = '')
     {
-        require_once(__DIR__ . '/../Salt/SaltInterface.php');
-        require_once(__DIR__ . '/../Salt/AbstractSalt.php');
+        $typo3ClassesPath = __DIR__ . '/../PasswordHashing/';
+        require_once($typo3ClassesPath . 'PublicMethodDeprecationTrait.php');
+        require_once($typo3ClassesPath . 'PasswordHashInterface.php');
+        require_once($typo3ClassesPath . 'InvalidPasswordHashException.php');
         if (empty($saltedHash)) {
             return $this->getSaltingInstanceInternal($this->settings['set_crypt_type']);
         } else {
-            foreach (['typo3_md5', 'typo3_blowfish', 'typo3_phpass', 'typo3_pbkdf2'] as $cryptType) {
+            // if salted hash is submitted, encryption type can be determined automatically
+            // TODO everything except argon2i is deprecated and will be removed in TYPO3v10
+            foreach (['argon2i', 'bcrypt', 'typo3_md5', 'typo3_blowfish', 'typo3_phpass', 'typo3_pbkdf2'] as $cryptType) {
                 $saltingInstance = $this->getSaltingInstanceInternal($cryptType);
                 if ($saltingInstance->isValidSaltedPW($saltedHash)) {
                     return $saltingInstance;
@@ -518,31 +520,39 @@ class OC_USER_TYPO3 extends BackendUtility implements \OCP\IUserBackend,
             }
         }
 
+
         return false;
     }
 
     /**
      * @param string $cryptType
-     * @return BlowfishSalt|Md5Salt|Pbkdf2Salt|PhpassSalt
+     * @return Argon2iPasswordHash|BcryptPasswordHash|Md5PasswordHash|BlowfishPasswordHash|PhpassPasswordHash|Pbkdf2PasswordHash
      */
     protected function getSaltingInstanceInternal($cryptType)
     {
         switch ($cryptType) {
+            case 'argon2i':
+                require_once(__DIR__ . '/../PasswordHashing/Argon2iPasswordHash.php');
+                $saltingInstance = new Argon2iPasswordHash();
+                break;
+            case 'bcrypt':
+                require_once(__DIR__ . '/../PasswordHashing/BcryptPasswordHash.php');
+                break;
             case 'typo3_md5':
-                require_once(__DIR__ . '/../Salt/Md5Salt.php');
-                $saltingInstance = new Md5Salt();
+                require_once(__DIR__ . '/../PasswordHashing/Md5PasswordHash.php');
+                $saltingInstance = new Md5PasswordHash();
                 break;
             case 'typo3_blowfish':
-                require_once(__DIR__ . '/../Salt/BlowfishSalt.php');
-                $saltingInstance = new BlowfishSalt();
+                require_once(__DIR__ . '/../PasswordHashing/BlowfishPasswordHash.php');
+                $saltingInstance = new BlowfishPasswordHash();
                 break;
             case 'typo3_phpass':
-                require_once(__DIR__ . '/../Salt/PhpassSalt.php');
-                $saltingInstance = new PhpassSalt();
+                require_once(__DIR__ . '/../PasswordHashing/PhpassPasswordHash.php');
+                $saltingInstance = new PhpassPasswordHash();
                 break;
             case 'typo3_pbkdf2':
-                require_once(__DIR__ . '/../Salt/Pbkdf2Salt.php');
-                $saltingInstance = new Pbkdf2Salt();
+                require_once(__DIR__ . '/../PasswordHashing/Pbkdf2PasswordHash.php');
+                $saltingInstance = new Pbkdf2PasswordHash();
                 break;
         }
 

@@ -40,10 +40,23 @@ namespace OCA\user_typo3;
 
 // Check if we are a user
 \OCP\User::checkAdminUser();
-\OCP\JSON::checkAppEnabled('user_typo3');
+if( !\OC::$server->getAppManager()->isEnabledForUser('user_typo3')) {
+    $l = \OC::$server->getL10N('lib');
+    self::error(array( 'data' => array( 'message' => $l->t('Application is not enabled'), 'error' => 'application_not_enabled' )));
+    exit();
+}
 
 // CSRF checks
-\OCP\JSON::callCheck();
+if(!\OC::$server->getRequest()->passesStrictCookieCheck()) {
+    header('Location: '.\OC::$WEBROOT);
+    exit();
+}
+
+if( !(\OC::$server->getRequest()->passesCSRFCheck())) {
+    $l = \OC::$server->getL10N('lib');
+    self::error(array( 'data' => array( 'message' => $l->t('Token expired. Please reload page.'), 'error' => 'token_expired' )));
+    exit();
+}
 
 
 $helper = new \OCA\user_typo3\lib\Helper;
