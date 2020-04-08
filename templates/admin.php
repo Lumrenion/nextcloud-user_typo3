@@ -65,9 +65,7 @@ $cfgClass =  'section';
  ?>>
 
             <p><label for="set_crypt_type"><?php p($l -> t('Encryption Type')); ?></label>
-                <?php $crypt_types = array(
-                        'typo3_md5' => 'MD5 salted hashing (secure)', 'typo3_blowfish' => 'Blowfish salted hashing (advanced)',
-                        'typo3_phpass' => 'Portable PHP password hashing (phpass)', 'typo3_pbkdf2' => 'PBKDF2 key derivation (advanced)');
+                <?php $crypt_types = array('argon2i' => 'Argon2i salted hashing', 'bcrypt' => 'Bcrypt salted hashing');
                 $selected_crypt_type = empty($_['set_crypt_type']) ? 'phpass' : $_['set_crypt_type']; ?>
                 <select id="set_crypt_type" name="set_crypt_type" style="width: 400px;">
                     <?php

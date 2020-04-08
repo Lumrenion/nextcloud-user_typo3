@@ -205,16 +205,8 @@ class Helper {
                 break;
         }
 
-        if(isset($limits['limit']) && $limits['limit'] !== null)
-        {
-            $limit = intval($limits['limit']);
-            $query .= " LIMIT ".$limit;
-        }
-
-        if(isset($limits['offset']) && $limits['offset'] !== null)
-        {
-            $offset = intval($limits['offset']);
-            $query .= " OFFSET ".$offset;
+        if(isset($limits['limit']) && $limits['limit'] !== null || isset($limits['offset']) && $limits['offset'] !== null) {
+            $query .= ' LIMIT ' . (empty($limits['offset']) ? '' : $limits['offset'] . ',') . (empty($limits['limit']) ? '18446744073709551615' : $limits['limit']);
         }
 
         Util::writeLog('OC_USER_TYPO3', "Preparing query: $query", Util::DEBUG);

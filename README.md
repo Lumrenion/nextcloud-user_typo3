@@ -41,7 +41,7 @@ The following salted hashing methods are supported:
 Password changing is disabled by default, but can be enabled in the Admin area. It is recommended to select the crypt_type
 that is selected in the TYPO3 extension configuration of saltedpasswords (basic.FE.saltedPWHashingMethod).
 
-You may want to select TYPO3 fe_groups as admin_groups. Users in those groups will be considered admins in nextcloud.
+You may want to select TYPO3 fe_groups as admin_groups. Users in those groups will be considered admins in nextcloud.********
 
 ### Currently supported parameters
 

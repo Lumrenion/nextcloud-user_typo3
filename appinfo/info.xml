@@ -16,7 +16,7 @@
 	</types>
 	<category>auth</category>
 	<dependencies>
-		<nextcloud min-version="13" max-version="15"/>
+		<nextcloud min-version="15" max-version="16"/>
 		<database>mysql</database>
 		<database>pgsql</database>
 	</dependencies>
